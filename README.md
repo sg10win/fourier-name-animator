@@ -8,11 +8,11 @@ Sold on Gumroad. Download buttons are locked until purchase.
 
 ## Live demo
 
-`https://USERNAME.github.io/fourier-name-animator/`
+`https://sg10win.github.io/fourier-name-animator/`
 
 After purchase, Gumroad redirects to:
 
-`https://USERNAME.github.io/fourier-name-animator/?unlocked=true`
+`https://sg10win.github.io/fourier-name-animator/?unlocked=true`
 
 This URL parameter removes the lock icons and enables the **Download HTML** and **Download GIF** buttons.
 
@@ -37,9 +37,8 @@ This URL parameter removes the lock icons and enables the **Download HTML** and 
 2. Find the **Redirect URL** (or "Thank You page URL") field.
 3. Set it to:
    ```
-   https://USERNAME.github.io/fourier-name-animator/?unlocked=true
+   https://sg10win.github.io/fourier-name-animator/?unlocked=true
    ```
-   Replace `USERNAME` with your GitHub username and `fourier-name-animator` with your repo name if different.
 4. Save the product.
 
 Buyers will be redirected to this URL after checkout, where downloads are automatically unlocked.
