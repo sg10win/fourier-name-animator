@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fourier Name Animator — Bros Animators</title>
-<script src="https://gumroad.com/js/gumroad.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
 *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -607,36 +606,6 @@ footer {
 footer a { color: var(--accent); text-decoration: none; }
 footer a:hover { text-decoration: underline; }
 
-/* ── BUY BUTTON ─────────────────────────────────────────── */
-.btn-buy {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-family: 'Space Mono', monospace;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 0 14px;
-  height: 36px;
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: opacity 0.15s, transform 0.1s;
-  flex-shrink: 0;
-}
-.btn-buy:hover { opacity: 0.88; }
-.btn-buy:active { transform: scale(0.96); }
-
-/* ── LOCKED DOWNLOAD BUTTONS ────────────────────────────── */
-.btn-gif.locked {
-  opacity: 0.45;
-  cursor: not-allowed;
-  position: relative;
-}
 </style>
 </head>
 <body>
@@ -648,14 +617,10 @@ footer a:hover { text-decoration: underline; }
       <div class="brand-icon">∿</div>
       <span class="brand-name">Bros Animators</span>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <a class="btn-buy" href="https://YOUR_GUMROAD_LINK_HERE"
-         data-gumroad-overlay-checkout="true">🔓 Buy — $10</a>
-      <button class="theme-btn" onclick="toggleTheme()" title="Toggle dark mode">
-        <span class="icon-moon">🌙</span>
-        <span class="icon-sun">☀️</span>
-      </button>
-    </div>
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle dark mode">
+      <span class="icon-moon">🌙</span>
+      <span class="icon-sun">☀️</span>
+    </button>
   </div>
 
   <!-- HERO -->
@@ -730,7 +695,7 @@ footer a:hover { text-decoration: underline; }
       <span class="stat">PTS <strong id="statPts">—</strong></span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-      <button class="btn-gif locked" id="btnHtml" onclick="handleDownloadHTML()">🔒 HTML</button>
+      <button class="btn-gif" id="btnHtml" onclick="downloadHTML()" disabled>⬇ HTML</button>
       <button class="btn-gif" id="btnGif" onclick="startGifCapture()" disabled>⬇ GIF</button>
     </div>
   </div>
@@ -874,34 +839,98 @@ footer a:hover { text-decoration: underline; }
 'use strict';
 
 // ═══════════════════════════════════════════════════════════
-//  UNLOCK  — enabled when URL contains ?unlocked=true
+//  HTML DOWNLOAD  — exports a minimal standalone animation
 // ═══════════════════════════════════════════════════════════
-const isUnlocked = new URLSearchParams(window.location.search).get('unlocked') === 'true';
+function downloadHTML() {
+  const name  = (document.getElementById('nameInput').value || 'Hello').slice(0, 9);
+  const speed = parseFloat(document.getElementById('speedSlider').value);
+  const thick = parseFloat(document.getElementById('thickSlider').value);
+  const maxC  = parseInt(document.getElementById('circlesSlider').value, 10);
+  const color = traceColor;
+  const dark  = document.documentElement.getAttribute('data-theme') === 'dark';
+  const bg    = dark ? '#06060e' : '#ffffff';
 
-function applyUnlockState() {
-  const btnHtml = document.getElementById('btnHtml');
-  const btnGif  = document.getElementById('btnGif');
-  if (isUnlocked) {
-    btnHtml.classList.remove('locked');
-    btnHtml.textContent = '⬇ HTML';
-  }
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${name} — Fourier</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:${bg};display:flex;align-items:center;justify-content:center;min-height:100dvh}
+canvas{max-width:100%;display:block}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const GLYPHS=${JSON.stringify(GLYPHS)};
+const NAME=${JSON.stringify(name)};
+const COLOR=${JSON.stringify(color)};
+const SPEED=${speed};
+const THICK=${thick};
+const MAXC=${maxC};
+const BG=${JSON.stringify(bg)};
+
+function samplePolyline(pts,n){if(pts.length<2)return Array(n).fill([...pts[0]]);const lens=[0];for(let i=1;i<pts.length;i++)lens.push(lens[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));const total=lens[lens.length-1];if(total<1e-6)return Array(n).fill([...pts[0]]);const out=[];for(let s=0;s<n;s++){const t=(s/n)*total;let lo=0,hi=lens.length-2;while(lo<hi){const m=(lo+hi+1)>>1;if(lens[m]<=t)lo=m;else hi=m-1}const u=(lens[lo+1]-lens[lo])<1e-9?0:(t-lens[lo])/(lens[lo+1]-lens[lo]);out.push([pts[lo][0]+u*(pts[lo+1][0]-pts[lo][0]),pts[lo][1]+u*(pts[lo+1][1]-pts[lo][1])])}return out}
+
+function buildNamePath(name,W,H){const text=(name||'Hello').replace(/[^A-Za-z0-9 !?.]/g,'').slice(0,9)||'Hello';const chars=[...text];const GW=100,SP=24;const totalGW=chars.length*(GW+SP)-SP;const scale=Math.min((W*0.82)/totalGW,(H*0.62)/GW);const ox=-totalGW*scale/2;const oy=-GW*scale/2;const STROKE_S=90,JUMP_S=18;const pts=[],draws=[];let prevEnd=null;chars.forEach((ch,ci)=>{const glyph=GLYPHS[ch]??[];const xBase=ci*(GW+SP);glyph.forEach(stroke=>{if(stroke.length<2)return;const mapped=stroke.map(([x,y])=>[ox+(xBase+x)*scale,oy+y*scale]);const sampled=samplePolyline(mapped,STROKE_S);if(prevEnd){const to=sampled[0];for(let j=1;j<=JUMP_S;j++){const u=j/JUMP_S;pts.push({x:prevEnd.x+u*(to[0]-prevEnd.x),y:prevEnd.y+u*(to[1]-prevEnd.y)});draws.push(false)}}sampled.forEach(([x,y])=>{pts.push({x,y});draws.push(true)});prevEnd={x:sampled[sampled.length-1][0],y:sampled[sampled.length-1][1]}})});return{pts,draws}}
+
+function dft(pts){const N=pts.length;const res=[];for(let k=0;k<N;k++){let re=0,im=0;for(let n=0;n<N;n++){const a=(2*Math.PI*k*n)/N;const c=Math.cos(a),s=Math.sin(a);re+=pts[n].x*c+pts[n].y*s;im+=pts[n].y*c-pts[n].x*s}re/=N;im/=N;res.push({freq:k,amp:Math.hypot(re,im),phase:Math.atan2(im,re)})}res.sort((a,b)=>b.amp-a.amp);return res}
+
+function precomputeTips(four,N){const buf=new Float32Array(N*2);for(let t=0;t<N;t++){let x=0,y=0;for(let i=0;i<four.length;i++){const{freq,amp,phase}=four[i];if(amp<0.3)break;const a=(2*Math.PI*freq*t)/N+phase;x+=amp*Math.cos(a);y+=amp*Math.sin(a)}buf[t*2]=x;buf[t*2+1]=y}return buf}
+
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+const traceCanvas=document.createElement('canvas');
+const traceCtx=traceCanvas.getContext('2d');
+let W=0,H=0,fourier=[],draws=[],totalN=0,tips=null,time=0,animId=null,traceIdx=0;
+
+function resize(){W=Math.min(window.innerWidth,800);H=Math.round(W*0.5);canvas.width=W;canvas.height=H;traceCanvas.width=W;traceCanvas.height=H}
+
+function init(){
+  resize();
+  const{pts,draws:d}=buildNamePath(NAME,W,H);
+  draws=d;totalN=pts.length;
+  const raw=dft(pts);
+  fourier=raw.slice(0,Math.min(raw.length,MAXC));
+  tips=precomputeTips(fourier,totalN);
+  animId=requestAnimationFrame(loop);
 }
 
-function handleDownloadHTML() {
-  if (!isUnlocked) { showLockMessage(); return; }
-  const source = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const blob = new Blob([source], { type: 'text/html' });
+function loop(){
+  ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+  const tIdx=Math.min(Math.round(time),totalN-1);
+  for(let i=traceIdx;i<=tIdx&&i<totalN;i++){
+    if(i>0&&draws[i]&&draws[i-1]){
+      traceCtx.beginPath();
+      traceCtx.moveTo(W/2+tips[(i-1)*2],H/2+tips[(i-1)*2+1]);
+      traceCtx.lineTo(W/2+tips[i*2],H/2+tips[i*2+1]);
+      traceCtx.strokeStyle=COLOR;traceCtx.lineWidth=THICK;
+      traceCtx.lineCap='round';traceCtx.lineJoin='round';traceCtx.stroke();
+    }
+  }
+  traceIdx=tIdx+1;
+  ctx.drawImage(traceCanvas,0,0);
+  time+=SPEED;
+  if(time>=totalN){cancelAnimationFrame(animId);animId=null;setTimeout(()=>{traceCtx.clearRect(0,0,W,H);traceIdx=0;time=0;animId=requestAnimationFrame(loop)},2500);return}
+  animId=requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize',()=>{resize();traceCtx.clearRect(0,0,W,H);traceIdx=0;time=0;if(animId)cancelAnimationFrame(animId);animId=requestAnimationFrame(loop)});
+init();
+<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = 'fourier-name-animator.html';
+  a.href = url;
+  a.download = name.toUpperCase() + '-fourier.html';
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function showLockMessage() {
-  const s = document.getElementById('gifStatus');
-  s.innerHTML = '🔒 <span>Purchase to unlock downloads</span>';
-  setTimeout(() => { s.textContent = ''; }, 3500);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1269,6 +1298,7 @@ function triggerAnimate() {
   if (animId) cancelAnimationFrame(animId);
   isReady = false;
   document.getElementById('btnGif').disabled = true;
+  document.getElementById('btnHtml').disabled = true;
   overlay.classList.add('show');
   overlayTxt.textContent = 'COMPUTING FOURIER TRANSFORM…';
 
@@ -1286,6 +1316,7 @@ function triggerAnimate() {
     overlay.classList.remove('show');
     isReady = true;
     document.getElementById('btnGif').disabled = false;
+    document.getElementById('btnHtml').disabled = false;
     initViz();
     animId = requestAnimationFrame(loop);
   }, 60);
@@ -1314,17 +1345,17 @@ function startGifCapture() {
   btn.textContent = '⏳ RECORDING…';
 
   // Render at half canvas size for reasonable file size
-  const GW = Math.round(W * 0.6);
-  const GH = Math.round(H * 0.6);
-  const scale = GW / W;
+  const GW = W;
+  const GH = H;
+  const scale = 1;
 
   const gifCanvas = document.createElement('canvas');
   gifCanvas.width = GW; gifCanvas.height = GH;
   const gc = gifCanvas.getContext('2d');
 
   const C = getThemeColors();
-  const GIF_FPS = 20;
-  const TOTAL_FRAMES = Math.min(120, Math.round(totalN / 4)); // ~6s at 20fps max
+  const GIF_FPS = 24;
+  const TOTAL_FRAMES = Math.min(200, Math.round(totalN / 3));
   const step = totalN / TOTAL_FRAMES;
 
   // Build all frames first (synchronously into ImageData array)
@@ -1333,45 +1364,28 @@ function startGifCapture() {
   const frameDataArr = [];
 
   // We re-run the epicycle math at reduced scale for GIF frames
+  const gifThick = parseFloat(document.getElementById('thickSlider').value);
+  const cx = GW / 2, cy = GH / 2;
+
   function renderGifFrame(frameIdx) {
     const t = Math.round(frameIdx * step) % totalN;
-    const sw = GW, sh = GH;
-    const cx = sw/2, cy = sh/2;
 
     gc.fillStyle = C.bg;
-    gc.fillRect(0,0,sw,sh);
+    gc.fillRect(0, 0, GW, GH);
 
-    // Draw trace up to t
-    gc.strokeStyle = C.trace;
-    gc.lineWidth = 1.6;
+    gc.strokeStyle = traceColor;
+    gc.lineWidth = gifThick;
     gc.lineCap = 'round';
-    for (let i=1; i<=t && i<totalN; i++) {
+    gc.lineJoin = 'round';
+    for (let i = 1; i <= t && i < totalN; i++) {
       if (!draws[i] || !draws[i-1]) continue;
-      const px=(cx+tips[(i-1)*2]*scale), py=(cy+tips[(i-1)*2+1]*scale);
-      const tx=(cx+tips[i*2]*scale),     ty=(cy+tips[i*2+1]*scale);
-      gc.beginPath(); gc.moveTo(px,py); gc.lineTo(tx,ty); gc.stroke();
+      gc.beginPath();
+      gc.moveTo(cx + tips[(i-1)*2], cy + tips[(i-1)*2+1]);
+      gc.lineTo(cx + tips[i*2],     cy + tips[i*2+1]);
+      gc.stroke();
     }
 
-    // Draw epicycles
-    let ex=cx, ey=cy;
-    for (let i=0; i<fourier.length; i++) {
-      const {freq,amp,phase} = fourier[i];
-      if (amp < 0.5) break;
-      const a = (2*Math.PI*freq*t)/totalN + phase;
-      const nx = ex + amp*scale*Math.cos(a);
-      const ny = ey + amp*scale*Math.sin(a);
-      const alpha = Math.min(0.25, Math.max(0.04, amp/30));
-      gc.beginPath(); gc.arc(ex,ey,amp*scale,0,Math.PI*2);
-      gc.strokeStyle = C.circle+alpha+')'; gc.lineWidth=0.6; gc.stroke();
-      gc.beginPath(); gc.moveTo(ex,ey); gc.lineTo(nx,ny);
-      gc.strokeStyle = C.arm+Math.min(0.6,alpha*3)+')'; gc.lineWidth=0.8; gc.stroke();
-      ex=nx; ey=ny;
-    }
-    // Tip
-    gc.beginPath(); gc.arc(ex,ey,2.5,0,Math.PI*2);
-    gc.fillStyle=C.tip; gc.fill();
-
-    return gc.getImageData(0,0,sw,sh);
+    return gc.getImageData(0, 0, GW, GH);
   }
 
   // Render all frames in batches to avoid blocking
@@ -1411,7 +1425,7 @@ function startGifCapture() {
       transparent: null,
       width: gw, height: gh,
       repeat: 0,
-      quality: 10,
+      quality: 1,
       dither: false,
       globalPalette: idx === 0 ? true : firstGlobalPalette,
       canTransfer: true,
@@ -1683,7 +1697,6 @@ function initViz() {
 //  INIT
 // ═══════════════════════════════════════════════════════════
 resize();
-applyUnlockState();
 window.addEventListener('resize', () => { resize(); resizeVizCanvases(); triggerAnimate(); });
 document.getElementById('nameInput').addEventListener('keydown', e => { if(e.key==='Enter') triggerAnimate(); });
 triggerAnimate();
