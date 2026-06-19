@@ -1345,17 +1345,17 @@ function startGifCapture() {
   btn.textContent = '⏳ RECORDING…';
 
   // Render at half canvas size for reasonable file size
-  const GW = W;
-  const GH = H;
-  const scale = 1;
+  const GW = Math.min(W, 480);
+  const GH = Math.round(GW * 0.5);
+  const scale = GW / W;
 
   const gifCanvas = document.createElement('canvas');
   gifCanvas.width = GW; gifCanvas.height = GH;
   const gc = gifCanvas.getContext('2d');
 
   const C = getThemeColors();
-  const GIF_FPS = 24;
-  const TOTAL_FRAMES = Math.min(200, Math.round(totalN / 3));
+  const GIF_FPS = 20;
+  const TOTAL_FRAMES = Math.min(80, Math.round(totalN / 4));
   const step = totalN / TOTAL_FRAMES;
 
   // Build all frames first (synchronously into ImageData array)
@@ -1374,14 +1374,14 @@ function startGifCapture() {
     gc.fillRect(0, 0, GW, GH);
 
     gc.strokeStyle = traceColor;
-    gc.lineWidth = gifThick;
+    gc.lineWidth = Math.max(1, gifThick * scale);
     gc.lineCap = 'round';
     gc.lineJoin = 'round';
     for (let i = 1; i <= t && i < totalN; i++) {
       if (!draws[i] || !draws[i-1]) continue;
       gc.beginPath();
-      gc.moveTo(cx + tips[(i-1)*2], cy + tips[(i-1)*2+1]);
-      gc.lineTo(cx + tips[i*2],     cy + tips[i*2+1]);
+      gc.moveTo(cx + tips[(i-1)*2] * scale, cy + tips[(i-1)*2+1] * scale);
+      gc.lineTo(cx + tips[i*2]     * scale, cy + tips[i*2+1]     * scale);
       gc.stroke();
     }
 
@@ -1425,7 +1425,7 @@ function startGifCapture() {
       transparent: null,
       width: gw, height: gh,
       repeat: 0,
-      quality: 1,
+      quality: 10,
       dither: false,
       globalPalette: idx === 0 ? true : firstGlobalPalette,
       canTransfer: true,
